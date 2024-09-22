@@ -10,6 +10,7 @@ import {
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native'; // 导入 useNavigation
 
 import { ImageVariant } from '@/components/atoms';
 import { Brand } from '@/components/molecules';
@@ -23,8 +24,14 @@ import SendImage from '@/theme/assets/images/send.png';
 import ColorsWatchImage from '@/theme/assets/images/colorswatch.png';
 import TranslateImage from '@/theme/assets/images/translate.png';
 
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/types/navigation'; // 确保你有这个类型定义
+
+type ExampleScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Example'>;
+
 function Example() {
 	const { t } = useTranslation(['example', 'welcome']);
+	const navigation = useNavigation<ExampleScreenNavigationProp>();
 
 	const {
 		colors,
@@ -68,6 +75,11 @@ function Example() {
 	) {
 		throw new Error('Image source is not valid');
 	}
+	console.log('Example component rendered');
+
+	const handleNavigateToHome = () => {
+		navigation.navigate('MainTabs');
+	};
 
 	return (
 		<SafeScreen>
@@ -156,6 +168,14 @@ function Example() {
 								style={{ tintColor: colors.purple500 }}
 							/>
 						</TouchableOpacity>
+						<TouchableOpacity
+							testID="go-to-home-button"
+							style={[components.buttonCircle, gutters.marginBottom_16]}
+							onPress={handleNavigateToHome}
+						>
+							<Text>Home</Text>
+						</TouchableOpacity>
+
 					</View>
 				</View>
 			</ScrollView>

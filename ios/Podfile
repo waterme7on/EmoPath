@@ -38,3 +38,6 @@ target 'EmoPath' do
     )
   end
 end
+
+pod 'react-native-maps', :path => '../node_modules/react-native-maps'
+pod 'react-native-geolocation', path: '../node_modules/@react-native-community/geolocation'

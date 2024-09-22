@@ -78,4 +78,7 @@ export default {
 	z10: {
 		zIndex: 10,
 	},
+	padding: {
+		padding: 10,
+	}
 } as const satisfies Record<string, ViewStyle>;
