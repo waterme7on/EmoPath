@@ -12,7 +12,12 @@ const colorsLight = {
 	purple500: '#44427D',
 	purple100: '#E1E1EF',
 	purple50: '#1B1A23',
-	graySoft: '#EAEAEA'
+	graySoft: '#EAEAEA',
+	// 新添加的颜色
+	heartbeatHighStart: '#FFB997',
+	heartbeatHighEnd: '#F67236',
+	heartbeatLowStart: '#9EB5DE',
+	heartbeatLowEnd: '#4768B4'
 } as const;
 
 const colorsDark = {
@@ -25,7 +30,11 @@ const colorsDark = {
 	purple500: '#A6A4F0',
 	purple100: '#252732',
 	purple50: '#1B1A23',
-	graySoft: '#EAEAEA'
+	graySoft: '#EAEAEA',
+	heartbeatHighStart: '#FFB997',
+	heartbeatHighEnd: '#F67236',
+	heartbeatLowStart: '#9EB5DE',
+	heartbeatLowEnd: '#4768B4'
 } as const;
 
 const sizes = [12, 16, 24, 32, 40, 80] as const;
