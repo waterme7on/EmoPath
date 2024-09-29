@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Platform, Dimensions, View, Text } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Marker, Polyline, Polygon } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker, Polyline, LatLng } from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import { XStack, Paragraph, Card, Button, H2, ScrollView } from 'tamagui';
 import { useTheme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import GradientConvexHull from '@/components/map/GradientConvexHull';
 
 const { width, height } = Dimensions.get('window');
 const LATITUDE_DELTA = 0.01;
@@ -37,18 +38,26 @@ const Home = () => {
         longitudeDelta: LONGITUDE_DELTA,
     });
 
-    const [selectedMarker, setSelectedMarker] = useState(null);
+    const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
 
     const mapData: MapData = {
         markers: [
             { id: 1, coordinate: { latitude: 37.78825, longitude: -122.4324 }, title: "Marker 1", description: "This is marker 1", value: -100 },
-            { id: 2, coordinate: { latitude: 37.78925, longitude: -122.4344 }, title: "Marker 2", description: "This is marker 2", value: 0 },
-            { id: 3, coordinate: { latitude: 37.78725, longitude: -122.4304 }, title: "Marker 3", description: "This is marker 3", value: 100 },
+            { id: 2, coordinate: { latitude: 37.79025, longitude: -122.4344 }, title: "Marker 2", description: "This is marker 2", value: 50 },
+            { id: 3, coordinate: { latitude: 37.78625, longitude: -122.4304 }, title: "Marker 3", description: "This is marker 3", value: -100 },
+            { id: 4, coordinate: { latitude: 37.78925, longitude: -122.4254 }, title: "Marker 4", description: "This is marker 4", value: -75 },
+            { id: 5, coordinate: { latitude: 37.78525, longitude: -122.4374 }, title: "Marker 5", description: "This is marker 5", value: -25 },
+            { id: 6, coordinate: { latitude: 37.79125, longitude: -122.4294 }, title: "Marker 6", description: "This is marker 6", value: 60 },
+            { id: 7, coordinate: { latitude: 37.78425, longitude: -122.4414 }, title: "Marker 7", description: "This is marker 7", value: 40 },
         ],
         network: {
-            1: [2, 3],
-            2: [],
-            3: []
+            1: [2, 3, 4],
+            2: [3, 5],
+            3: [4, 6],
+            4: [5, 7],
+            5: [6],
+            6: [7],
+            7: []
         }
     };
 
@@ -67,7 +76,7 @@ const Home = () => {
         );
     }, []);
 
-    const handleMarkerPress = (marker) => {
+    const handleMarkerPress = (marker: MarkerData) => {
         setSelectedMarker(marker);
     };
 
@@ -105,50 +114,55 @@ const Home = () => {
         return getColorForValues(value, value);
     };
 
-    // 计算两点之间的叉积
-    const cross = (o: any, a: any, b: any) => {
-        return (a.longitude - o.longitude) * (b.latitude - o.latitude) - (a.latitude - o.latitude) * (b.longitude - o.longitude);
+    const dividePoints = (points: LatLng[], divisions: number): LatLng[][] => {
+        const sortedPoints = [...points].sort((a, b) => a.latitude - b.latitude);
+        const pointsPerDivision = Math.ceil(points.length / divisions);
+        const result: LatLng[][] = [];
+
+        for (let i = 0; i < divisions; i++) {
+            const start = i * pointsPerDivision;
+            const end = (i + 1) * pointsPerDivision;
+            const divisionPoints = sortedPoints.slice(start, end);
+
+            // Ensure each division has at least 3 points
+            if (divisionPoints.length < 3 && result.length > 0) {
+                result[result.length - 1] = result[result.length - 1].concat(divisionPoints);
+            } else {
+                result.push(divisionPoints);
+            }
+        }
+
+        // Remove any empty divisions
+        return result.filter(division => division.length >= 3);
     };
 
-    // 计算凸包
-    const computeConvexHull = (points: any[]) => {
-        points.sort((a, b) => a.longitude - b.longitude || a.latitude - b.latitude);
-        
-        const lower = [];
-        for (let i = 0; i < points.length; i++) {
-            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], points[i]) <= 0) {
-                lower.pop();
-            }
-            lower.push(points[i]);
-        }
-        
-        const upper = [];
-        for (let i = points.length - 1; i >= 0; i--) {
-            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], points[i]) <= 0) {
-                upper.pop();
-            }
-            upper.push(points[i]);
-        }
-        
-        upper.pop();
-        lower.pop();
-        return lower.concat(upper);
+
+    const generateGradientColors = (startColor: string, endColor: string, steps: number): string[] => {
+        const start = parseInt(startColor.slice(1), 16);
+        const end = parseInt(endColor.slice(1), 16);
+        const stepR = ((end >> 16) & 255) - ((start >> 16) & 255);
+        const stepG = ((end >> 8) & 255) - ((start >> 8) & 255);
+        const stepB = (end & 255) - (start & 255);
+
+        return Array.from({ length: steps }, (_, i) => {
+            const r = Math.round(((start >> 16) & 255) + stepR * (i / (steps - 1)));
+            const g = Math.round(((start >> 8) & 255) + stepG * (i / (steps - 1)));
+            const b = Math.round((start & 255) + stepB * (i / (steps - 1)));
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        });
     };
 
-    // 获取所有点的坐标
     const getAllPoints = () => {
         return mapData.markers.map(marker => marker.coordinate);
     };
 
-    // 计算多边形的坐标
-    const polygonCoordinates = computeConvexHull(getAllPoints());
-    console.log("Polygon Coordinates:", polygonCoordinates); // 添加这行来检查坐标
+    const points = getAllPoints();
+    const divisions = 5; // 你想要的分区数量
+    const dividedPoints = dividePoints(points, divisions);
+    const gradientColors = generateGradientColors(colors.heartbeatLowStart, colors.heartbeatHighEnd, divisions);
 
-    // 计算多边形的颜色（这里我们使用所有点的平均值）
-    const getPolygonColor = () => {
-        const avgValue = mapData.markers.reduce((sum, marker) => sum + marker.value, 0) / mapData.markers.length;
-        return getColorForValue(avgValue);
-    };
+    console.log('Divided Points:', dividedPoints);
+    console.log('Gradient Colors:', gradientColors);
 
     return (
         <SafeAreaView style={[styles.container, backgrounds.graySoft]}>
@@ -178,12 +192,6 @@ const Home = () => {
                             showsUserLocation={true}
                             showsMyLocationButton={true}
                         >
-                            <Polygon
-                                coordinates={polygonCoordinates}
-                                fillColor={`${getPolygonColor()}40`}  // 40 is for 25% opacity
-                                strokeColor={getPolygonColor()}
-                                strokeWidth={2}
-                            />
                             {mapData.markers.map((marker) => (
                                 <Marker
                                     key={marker.id}
@@ -217,6 +225,18 @@ const Home = () => {
                                     return null;
                                 })
                             )}
+                            {dividedPoints.map((pointSet, index) => {
+                                console.log(`Rendering GradientConvexHull for division ${index} with points:`, pointSet);
+                                return (
+                                    <GradientConvexHull
+                                        key={index}
+                                        points={pointSet}
+                                        color={gradientColors[index]}
+                                        opacity={0.5}
+                                        strokeWidth={2}
+                                    />
+                                );
+                            })}
                         </MapView>
                     </View>
                     {selectedMarker && (
